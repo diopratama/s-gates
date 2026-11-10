@@ -1,0 +1,84 @@
+services:
+  # 🐘 PostgreSQL Database Container (Port 5436)
+  db:
+    image: postgres:16-alpine
+    container_name: s_gates_db
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5436:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      POSTGRES_DB: ${DB_NAME:-s_gates}
+    volumes:
+      - pgdata_sgates:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-s_gates}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 🛡️ S-Gates Backend API & Decoupled Security Engine (FastAPI, Port 8003)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: s_gates_backend
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:8003:8000"
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - ENABLE_DEMO_ROLE_SWITCHER=${ENABLE_DEMO_ROLE_SWITCHER:-false}
+      - DATABASE_URL=${DATABASE_URL:?Set DATABASE_URL in .env}
+      - SEED_DEMO_ASSESSMENTS=${SEED_DEMO_ASSESSMENTS:-false}
+      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - MAX_ZIP_SIZE_MB=${MAX_ZIP_SIZE_MB:-50}
+      - MAX_EXPANDED_SIZE_MB=${MAX_EXPANDED_SIZE_MB:-128}
+      - MAX_FILE_COUNT=${MAX_FILE_COUNT:-5000}
+      - MAX_SCAN_SECONDS=${MAX_SCAN_SECONDS:-120}
+      - EVIDENCE_VAULT_DIR=/app/evidence_vault
+      - SHAREPOINT_VAULT_URL=${SHAREPOINT_VAULT_URL:-https://example.invalid/sharepoint-vault}
+      - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL:-https://example.invalid/teams-webhook}
+      - FRESHSERVICE_DOMAIN=${FRESHSERVICE_DOMAIN:-example.invalid}
+      - ALLOWED_ORIGINS=http://localhost:3003,http://127.0.0.1:3003,http://localhost:3000,http://127.0.0.1:3000,http://172.26.14.160:3003
+    volumes:
+      - evidence_vault_sgates:/app/evidence_vault
+      - trivy_cache_sgates:/home/appuser/.cache
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/ready"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+
+  # 🎨 S-Gates Web Portal (Next.js 14, Port 3003)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://backend:8000}
+    container_name: s_gates_frontend
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:3003:3000"
+    environment:
+      - BACKEND_INTERNAL_URL=${BACKEND_INTERNAL_URL:-http://backend:8000}
+      - NEXT_PUBLIC_API_URL=http://localhost:8003
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata_sgates:
+    driver: local
+  evidence_vault_sgates:
+    driver: local
+  trivy_cache_sgates:
+    driver: local
