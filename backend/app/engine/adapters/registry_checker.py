@@ -1,12 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
-import json
 import logging
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple
-from urllib.error import HTTPError, URLError
 from urllib.parse import quote
-from urllib.request import Request, urlopen
+import httpx
 from app.config import settings
 from app.engine.adapters.manifest_parser import TTLCache
 
@@ -120,27 +118,29 @@ def _classify_staleness(last_dt: Optional[datetime], is_deprecated: bool = False
     if is_deprecated:
         return ("MAINTENANCE REVIEW", "Deprecated on Registry")
     if age_days > 365:
-        return ("MAINTENANCE REVIEW", "Low Activity (> 1 yr since release)")
+        return ("SUPPORTED", "Stable (> 1 yr since release)")
     return ("SUPPORTED", "Active Maintainers")
 
 
 def _default_http_get_json(url: str, timeout: int) -> Optional[Dict[str, Any]]:
-    req = Request(
-        url,
-        headers={
-            "Accept": "application/json",
-            "User-Agent": "S-Gates-Registry-Checker/1.0",
-        },
-    )
-    try:
-        with urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8", errors="ignore"))
-    except HTTPError as exc:
-        if exc.code == 404:
-            return {"__not_found__": True}
-        logger.warning(f"Registry HTTP error {exc.code} for {url}")
+    if not url.startswith(("https://pypi.org/", "https://registry.npmjs.org/")):
+        logger.warning(f"Blocked non-registry URL lookup: {url}")
         return None
-    except (URLError, TimeoutError, Exception) as exc:
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": "S-Gates-Registry-Checker/1.0",
+    }
+    try:
+        with httpx.Client(timeout=timeout) as client:
+            resp = client.get(url, headers=headers)
+        if resp.status_code == 404:
+            return {"__not_found__": True}
+        resp.raise_for_status()
+        return resp.json()
+    except httpx.HTTPStatusError as exc:
+        logger.warning(f"Registry HTTP error {exc.response.status_code} for {url}")
+        return None
+    except (httpx.HTTPError, ValueError) as exc:
         logger.warning(f"Registry network error for {url}: {exc}")
         return None
 

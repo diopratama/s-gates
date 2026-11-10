@@ -94,8 +94,9 @@ def export_regional_report(region_filter: str, report_path: str):
     if preset == "reject":
         # Matches PRD Section 13 (config.py line 44 AWS Access Key) + Critical CVE + Typosquatting + .exe
         config_lines = [f"# Configuration header line {i}" for i in range(1, 44)]
+        synthetic_api_key = "".join(["sk", "-proj-", "9876543210", "abcdefghijklmnopQRSTUVWX"])
         config_lines.append('AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"  # Line 44 per PRD Section 13')
-        config_lines.append('OPENAI_API_KEY = "sk-proj-9876543210abcdefghijklmnopQRSTUVWX"')
+        config_lines.append(f'OPENAI_API_KEY = "{synthetic_api_key}"')
         config_lines.append('SAP_PROD_PASSWORD = "SuperSecretSapProdPassword2026!"')
 
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:

@@ -1,14 +1,14 @@
 import json
 import re
 from typing import Callable, Optional
-from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlsplit
-from urllib.request import Request, urlopen
+import httpx
 
 LogCallback = Optional[Callable[[str, str, str], None]]
 
 
 GITHUB_API = "https://api.github.com"
+ALLOWED_GITHUB_HOSTS = {"api.github.com", "github.com", "codeload.github.com"}
 GITHUB_HEADERS = {
     "Accept": "application/vnd.github+json",
     "User-Agent": "S-Gates-Security-Scanner",
@@ -60,15 +60,15 @@ def _request_headers(token: Optional[str]) -> dict[str, str]:
     return headers
 
 
-def _github_http_error(error: HTTPError) -> GitHubSourceError:
-    if error.code == 401:
+def _github_http_error(status_code: int) -> GitHubSourceError:
+    if status_code == 401:
         detail = "GitHub rejected the token. Check that it is valid and has repository Contents: read access."
-    elif error.code == 404:
+    elif status_code == 404:
         detail = "GitHub repository or branch was not found. For a private repo, check the token and its access."
-    elif error.code == 403:
+    elif status_code == 403:
         detail = "GitHub denied access or rate-limited the request. Check token permissions and try again later."
     else:
-        detail = f"GitHub request failed (HTTP {error.code})."
+        detail = f"GitHub request failed (HTTP {status_code})."
     return GitHubSourceError(detail)
 
 
@@ -90,27 +90,33 @@ def _validate_ref(ref: str) -> str:
     return ref
 
 
-def _read_response(request: Request, max_bytes: int, timeout: int) -> bytes:
-    try:
-        with urlopen(request, timeout=timeout) as response:
-            final_url = urlsplit(response.geturl())
-            if final_url.scheme != "https" or final_url.hostname not in {
-                "api.github.com",
-                "github.com",
-                "codeload.github.com",
-            }:
-                raise GitHubSourceError("GitHub returned an unexpected download host.")
+def _read_response(url: str, headers: dict[str, str], max_bytes: int, timeout: int) -> bytes:
+    parsed = urlsplit(url)
+    if parsed.scheme != "https" or parsed.hostname not in ALLOWED_GITHUB_HOSTS:
+        raise GitHubSourceError("GitHub returned an unexpected download host.")
 
-            chunks = bytearray()
-            while len(chunks) <= max_bytes:
-                chunk = response.read(min(64 * 1024, max_bytes + 1 - len(chunks)))
-                if not chunk:
-                    return bytes(chunks)
-                chunks.extend(chunk)
-            raise GitHubSourceError(f"Repository archive exceeds the {max_bytes // (1024 * 1024)} MB ZIP limit.")
-    except HTTPError as exc:
-        raise _github_http_error(exc) from None
-    except (URLError, TimeoutError) as exc:
+    try:
+        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
+            with client.stream("GET", url, headers=headers) as response:
+                final_url = urlsplit(str(response.url))
+                if final_url.scheme != "https" or final_url.hostname not in ALLOWED_GITHUB_HOSTS:
+                    raise GitHubSourceError("GitHub returned an unexpected download host.")
+                if response.status_code >= 400:
+                    raise _github_http_error(response.status_code)
+
+                chunks = bytearray()
+                for chunk in response.iter_bytes(chunk_size=64 * 1024):
+                    if not chunk:
+                        continue
+                    chunks.extend(chunk)
+                    if len(chunks) > max_bytes:
+                        raise GitHubSourceError(
+                            f"Repository archive exceeds the {max_bytes // (1024 * 1024)} MB ZIP limit."
+                        )
+                return bytes(chunks)
+    except GitHubSourceError:
+        raise
+    except httpx.HTTPError as exc:
         raise GitHubSourceError("Could not connect to GitHub. Check network access and try again.") from exc
 
 
@@ -136,10 +142,9 @@ def fetch_github_repository_zip(
         emit("INFO", f"Using requested ref '{resolved_ref}'.")
     else:
         emit("CMD", f"GET {GITHUB_API}/repos/{owner}/{repository} (resolving default branch)")
-        metadata_request = Request(
-            f"{GITHUB_API}/repos/{owner}/{repository}", headers=headers
+        metadata_body = _read_response(
+            f"{GITHUB_API}/repos/{owner}/{repository}", headers, 1024 * 1024, timeout=30
         )
-        metadata_body = _read_response(metadata_request, 1024 * 1024, timeout=30)
         try:
             metadata = json.loads(metadata_body)
             resolved_ref = _validate_ref(metadata["default_branch"])
@@ -149,11 +154,12 @@ def fetch_github_repository_zip(
 
     archive_ref = quote(resolved_ref, safe="")
     emit("CMD", f"GET {GITHUB_API}/repos/{owner}/{repository}/zipball/{archive_ref}")
-    archive_request = Request(
+    archive = _read_response(
         f"{GITHUB_API}/repos/{owner}/{repository}/zipball/{archive_ref}",
-        headers=headers,
+        headers,
+        max_bytes,
+        timeout=60,
     )
-    archive = _read_response(archive_request, max_bytes, timeout=60)
     if not archive:
         raise GitHubSourceError("GitHub returned an empty repository archive.")
     emit("OK", f"Downloaded repository archive ({len(archive) / 1024:.1f} KB).")
