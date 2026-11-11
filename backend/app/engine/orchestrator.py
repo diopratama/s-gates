@@ -170,7 +170,7 @@ def execute_full_assessment(
         max_file_count=min(sys_cfg.max_file_count, settings.MAX_FILE_COUNT),
     )
     if zip_res.valid:
-        emit("OK", "ZIP_GATE", f"Archive passed security gate — {zip_res.file_count} files, expanded {zip_res.expanded_size_bytes / 1024:.1f} KB, SHA-256: {zip_res.sha256_hash[:16]}...")
+        emit("OK", "ZIP_GATE", f"Archive passed security gate: {zip_res.file_count} files, expanded {zip_res.expanded_size_bytes / 1024:.1f} KB, SHA-256 {zip_res.sha256_hash[:16]}...")
     else:
         emit("ERR", "ZIP_GATE", f"Archive rejected by ZIP Security Gate: {'; '.join(zip_res.errors)}")
 
@@ -244,7 +244,7 @@ def execute_full_assessment(
         status_reasons = [force_scan_error_reason] + status_reasons
 
     decision_level = "ERR" if tech_status in {"REJECT", "SCAN-ERROR"} else ("WARN" if tech_status == "REVIEW" else "OK")
-    emit(decision_level, "RISK_ENGINE", f"Decision: {tech_status} (Risk Level: {risk_level}) — {len(scan_out['findings'])} total finding(s).")
+    emit(decision_level, "RISK_ENGINE", f"Decision: {tech_status} (Risk Level: {risk_level}), {len(scan_out['findings'])} total finding(s).")
 
     sandbox_status = (
         "Required - Pending" if scan_out["sandbox_required"] else "Not Required"
@@ -431,7 +431,7 @@ def execute_full_assessment(
 
     db.commit()
     db.refresh(assessment)
-    emit("OK", "VAULT", f"Assessment {assessment_code} persisted with tamper-evident SHA-256 audit chain.")
+    emit("OK", "VAULT", f"Saved {assessment_code} and updated the SHA-256 audit log.")
     return assessment
 
 

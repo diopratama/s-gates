@@ -31,10 +31,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description=(
-        "S-Gates development prototype — ZIP and GitHub intake with heuristic demo rules. "
-        "This build does not execute external scanners and is not production-ready."
-    ),
+    description="Application security gateway API for scanning GitHub repositories and source ZIP archives.",
     lifespan=lifespan,
 )
 
@@ -70,9 +67,20 @@ def health_check():
             "trivy": scanner_status["trivy_version"],
             "gitleaks": scanner_status["gitleaks_version"],
             "semgrep": scanner_status["semgrep_version"],
+            "osv_scanner": scanner_status.get("osv_version", "not-installed"),
+            "guarddog": scanner_status.get("guarddog_version", "not-installed"),
         },
         "engines": (
-            ["Aqua Security Trivy", "Gitleaks Credential Scanner", "Semgrep SAST", "ZIP-Security-Gate", "Risk-Decision-Engine"]
+            [
+                "Aqua Security Trivy",
+                "Gitleaks Credential Scanner",
+                "Semgrep SAST",
+                "Google OSV-Scanner",
+                "Datadog GuardDog",
+                "PyPI & npm Registry Checker",
+                "ZIP-Security-Gate",
+                "Risk-Decision-Engine",
+            ]
             if all_ready
             else ["S-Gates heuristic demo rules", "ZIP-Security-Gate", "Risk-Decision-Engine"]
         ),

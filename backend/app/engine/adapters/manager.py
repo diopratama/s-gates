@@ -224,7 +224,7 @@ class ScannerManager:
                             warn_note = f" (warnings: {res.error_message})" if res.error_message else ""
                             emit(
                                 "WARN" if res.error_message else "OK",
-                                f"{scanner_name} finished in {res.execution_time_seconds:.2f}s — {len(res.findings)} finding(s){dep_note}.{warn_note}",
+                                f"{scanner_name} finished in {res.execution_time_seconds:.2f}s: {len(res.findings)} finding(s){dep_note}.{warn_note}",
                             )
                         else:
                             emit(

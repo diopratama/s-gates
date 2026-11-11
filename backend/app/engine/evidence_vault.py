@@ -360,15 +360,15 @@ def _render_html_report(
             f'<div class="disclaimer"><strong>Governance Principle (PRD Section 42):</strong> {html.escape(MANDATORY_GOVERNANCE_DISCLAIMER)}</div>'
         )
     )
-    trivy_label = f"Aqua Trivy SCA & Config (v{html.escape(str(scanner_versions.get('trivy', '0.58.0')))})" if is_external else "Dependency/misconfiguration heuristics (Trivy not executed)"
-    gitleaks_label = f"Gitleaks Secret Detection (v{html.escape(str(scanner_versions.get('gitleaks', '8.21.2')))})" if is_external else "Secret-pattern heuristics (Gitleaks not executed)"
-    semgrep_label = f"Semgrep SAST (v{html.escape(str(scanner_versions.get('semgrep', '1.99.0')))})" if is_external else "SAST heuristics (Semgrep not executed)"
+    trivy_label = f"Aqua Trivy SCA & Config (v{html.escape(str(scanner_versions.get('trivy', '0.76.2')))})" if is_external else "Dependency/misconfiguration heuristics (Trivy not executed)"
+    gitleaks_label = f"Gitleaks Secret Detection (v{html.escape(str(scanner_versions.get('gitleaks', '8.30.1')))})" if is_external else "Secret-pattern heuristics (Gitleaks not executed)"
+    semgrep_label = f"Semgrep SAST (v{html.escape(str(scanner_versions.get('semgrep', '1.95.0')))})" if is_external else "SAST heuristics (Semgrep not executed)"
 
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>S-Gates Security Assessment Report — {html.escape(assessment_code)}</title>
+  <title>S-Gates Security Assessment Report: {html.escape(assessment_code)}</title>
   <style>
     body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #0f172a; margin: 32px; background: #f8fafc; }}
     .card {{ background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 24px; margin-bottom: 24px; }}
@@ -407,7 +407,7 @@ def _render_html_report(
       </tr>
       <tr>
         <th>{gitleaks_label}</th>
-        <td>Detected secrets: {gitleaks.get('secrets_detected', 0)}. Credential values are strictly masked; the retained source archive is unmodified.</td>
+        <td>Detected secrets: {gitleaks.get('secrets_detected', 0)}. Credential values are masked; the source archive is stored unmodified.</td>
       </tr>
       <tr>
         <th>{semgrep_label}</th>

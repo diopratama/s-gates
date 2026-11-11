@@ -66,28 +66,28 @@ export default function LiveScanTerminal({
     switch (status) {
       case "running":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/40 px-2.5 py-0.5 text-[10px] font-mono font-bold text-amber-300">
-            <Loader2 className="h-3 w-3 animate-spin" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/40 px-2.5 py-0.5 text-xs font-mono font-bold text-amber-200">
+            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
             RUNNING
           </span>
         );
       case "completed":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 px-2.5 py-0.5 text-[10px] font-mono font-bold text-emerald-300">
-            <CheckCircle2 className="h-3 w-3" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/40 px-2.5 py-0.5 text-xs font-mono font-bold text-emerald-200">
+            <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
             COMPLETED
           </span>
         );
       case "failed":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 border border-rose-500/40 px-2.5 py-0.5 text-[10px] font-mono font-bold text-rose-300">
-            <XCircle className="h-3 w-3" />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 border border-rose-500/40 px-2.5 py-0.5 text-xs font-mono font-bold text-rose-200">
+            <XCircle className="h-3 w-3" aria-hidden="true" />
             FAILED
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 border border-slate-700 px-2.5 py-0.5 text-[10px] font-mono font-bold text-slate-400">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-800 border border-slate-700 px-2.5 py-0.5 text-xs font-mono font-bold text-slate-300">
             IDLE
           </span>
         );
@@ -121,7 +121,7 @@ export default function LiveScanTerminal({
       </div>
 
       {/* Pipeline Stage Stepper */}
-      <div className="grid grid-cols-5 gap-1 px-3 py-2 bg-slate-900/80 border-b border-slate-800 text-[10px] font-mono">
+      <div className="grid grid-cols-5 gap-1 px-3 py-2 bg-slate-900/80 border-b border-slate-800 text-xs font-mono">
         {PIPELINE_STAGES.map((stage) => {
           const isReached = seenStages.has(stage.key);
           const isCurrent = status === "running" && lastStage === stage.key;
@@ -133,10 +133,10 @@ export default function LiveScanTerminal({
               key={stage.key}
               className={`rounded px-1.5 py-1 text-center border transition truncate ${
                 isCurrent
-                  ? "bg-amber-500/15 border-amber-500/40 text-amber-300 font-bold"
+                  ? "bg-amber-500/15 border-amber-500/40 text-amber-200 font-bold"
                   : isDone
-                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
-                    : "bg-slate-950/60 border-slate-800 text-slate-500"
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+                    : "bg-slate-950/60 border-slate-800 text-slate-400"
               }`}
             >
               {stage.label}
@@ -157,13 +157,12 @@ export default function LiveScanTerminal({
                 s-gates@scanner-engine:~$ ready --mode=external
               </div>
               <p className="text-slate-400 leading-relaxed font-sans text-xs">
-                Real-time backend execution logs will stream here when you
-                launch a GitHub repository scan or upload a source-code{" "}
-                <code className="text-emerald-300">.zip</code> package.
+                Backend logs stream here once you start a GitHub or{" "}
+                <code className="text-emerald-300">.zip</code> scan.
               </p>
               <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3 space-y-1 text-[11px] text-slate-400">
                 <div className="text-slate-200 font-semibold mb-1">
-                  End-to-End Pipeline Stages:
+                  Pipeline stages:
                 </div>
                 <div>1. Repository fetch / ZIP upload intake</div>
                 <div>2. ZIP Security Gate (traversal, bomb &amp; SHA-256)</div>
@@ -172,8 +171,8 @@ export default function LiveScanTerminal({
                 <div>5. Evidence Vault &amp; SHA-256 audit chain write</div>
               </div>
             </div>
-            <div className="text-[11px] text-slate-500 flex items-center gap-1.5">
-              <span className="inline-block w-2 h-3.5 bg-emerald-400/70 animate-pulse" />
+            <div className="text-xs text-slate-400 flex items-center gap-1.5">
+              <span aria-hidden="true" className="inline-block w-2 h-3.5 bg-emerald-400/70 animate-pulse" />
               <span>Awaiting scan job...</span>
             </div>
           </div>
@@ -181,7 +180,7 @@ export default function LiveScanTerminal({
           <>
             {logs.map((entry, idx) => (
               <div key={idx} className="flex items-start gap-1.5 break-words">
-                <span className="text-slate-600 shrink-0">
+                <span className="text-slate-400 shrink-0">
                   [{entry.timestamp}]
                 </span>
                 <span
@@ -191,7 +190,7 @@ export default function LiveScanTerminal({
                 >
                   [{entry.level}]
                 </span>
-                <span className="text-slate-500 shrink-0">
+                <span className="text-slate-400 shrink-0">
                   [{entry.stage}]
                 </span>
                 <span
@@ -257,7 +256,7 @@ export default function LiveScanTerminal({
                 • Findings: {completedAssessment.findings.length}
               </div>
             </div>
-            <span className="rounded bg-slate-900 border border-slate-700 px-2 py-1 text-[10px] font-mono text-slate-300">
+            <span className="rounded bg-slate-900 border border-slate-700 px-2 py-1 text-xs font-mono text-slate-200">
               {completedAssessment.risk_level} RISK
             </span>
           </div>

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "S-Gates | Application Security Gateway & Governance Platform",
+  title: "S-Gates | Application Security Gateway",
   description:
-    "Enable innovation without losing security visibility and governance. Build Fast. Scan First. Deploy with Confidence.",
+    "Pre-release source code scanner and approval gate for GitHub repositories and ZIP archives.",
   icons: {
     icon: "/favicon.svg",
   },

@@ -117,7 +117,7 @@ def validate_and_extract_zip(
         ratio = expanded_size_bytes / max(zip_size_bytes, 1)
         if ratio > 150:
             errors.append(
-                f"Suspicious compression ratio ({ratio:.1f}x) detected — potential ZIP bomb rejected."
+                f"Suspicious compression ratio ({ratio:.1f}x) detected; potential ZIP bomb rejected."
             )
 
     # Inspect every entry path BEFORE extracting any bytes
